@@ -15,7 +15,7 @@
                 <p class="text-sm text-slate-400">Control de Suscripciones y Ventas</p>
             </div>
             <div class="text-right">
-                <span class="text-xs bg-emerald-900 text-emerald-300 px-3 py-1 rounded-full font-semibold">Moneda: S/. (Soles)</span>
+                <span class="text-xs bg-emerald-900 text-emerald-300 px-3 py-1 rounded-full font-semibold">Soles (S/.)</span>
             </div>
         </header>
 
@@ -35,9 +35,25 @@
             </div>
         </div>
 
+        <!-- Formulario para Nueva Venta -->
+        <div class="bg-slate-800 p-5 rounded-xl shadow-lg border border-slate-700 mb-6">
+            <h3 class="font-bold text-lg text-white mb-4"><i class="fa-solid fa-user-plus mr-2 text-emerald-400"></i>Registrar Nueva Venta</h3>
+            <form id="form-venta" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <input type="text" id="input-cliente" placeholder="Nombre del cliente" required class="bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500">
+                <input type="text" id="input-telefono" placeholder="WhatsApp (ej. 999888777)" required class="bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500">
+                <input type="text" id="input-servicio" placeholder="Servicio (ej. Disney, Netflix)" required class="bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500">
+                <input type="date" id="input-vencimiento" required class="bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500">
+                <input type="number" step="0.1" id="input-costo" placeholder="Costo proveedor (S/.)" required class="bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500">
+                <input type="number" step="0.1" id="input-venta" placeholder="Precio venta (S/.)" required class="bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500">
+                <button type="submit" class="sm:col-span-2 lg:col-span-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold p-2.5 rounded-lg transition text-sm">
+                    <i class="fa-solid fa-plus mr-1"></i> Guardar Venta
+                </button>
+            </form>
+        </div>
+
         <!-- Tabla de Clientes -->
         <div class="bg-slate-800 rounded-xl shadow-lg border border-slate-700 overflow-hidden">
-            <div class="p-4 border-b border-slate-700 flex justify-between items-center">
+            <div class="p-4 border-b border-slate-700">
                 <h3 class="font-bold text-lg text-white">Base de Datos de Clientes</h3>
             </div>
             <div class="overflow-x-auto">
@@ -46,7 +62,7 @@
                         <tr class="bg-slate-700 text-xs text-slate-300 uppercase">
                             <th class="p-3">Cliente</th>
                             <th class="p-3">Servicio</th>
-                            <th class="p-3">Vencimiento</th>
+                            <th class="p-3">Vencimiento / Días Restantes</th>
                             <th class="p-3">Costo / Venta</th>
                             <th class="p-3">WhatsApp</th>
                         </tr>
@@ -60,7 +76,7 @@
     </div>
 
     <script>
-        const datosClientes = [
+        let datosClientes = JSON.parse(localStorage.getItem("panda_ventas")) || [
             { cliente: "Katy", telefono: "997243955", servicio: "Disney", vencimiento: "2026-10-21", costo: 6.0, venta: 10.0 },
             { cliente: "Prime", telefono: "936426800", servicio: "Prime Video", vencimiento: "2026-10-31", costo: 2.5, venta: 7.0 },
             { cliente: "Gianpierre", telefono: "902106379", servicio: "Paramount", vencimiento: "2026-11-02", costo: 3.9, venta: 7.0 },
@@ -71,22 +87,44 @@
             { cliente: "Jenifer", telefono: "944461030", servicio: "HBO Max", vencimiento: "2026-11-13", costo: 3.9, venta: 8.0 }
         ];
 
-        function cargarApp() {
+        function calcularDiasRestantes(fechaVencimiento) {
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+            const venc = new Date(fechaVencimiento + "T00:00:00");
+            const diferenciaTiempo = venc - hoy;
+            const dias = Math.ceil(diferenciaTiempo / (1000 * 60 * 60 * 24));
+            return dias;
+        }
+
+        function actualizarApp() {
             const tbody = document.getElementById("tabla-cuerpo");
             tbody.innerHTML = "";
             let totalV = 0;
             let totalC = 0;
 
             datosClientes.forEach(item => {
-                totalV += item.venta;
-                totalC += item.costo;
+                totalV += Number(item.venta);
+                totalC += Number(item.costo);
+
+                const dias = calcularDiasRestantes(item.vencimiento);
+                let badgeDias = "";
+                if (dias < 0) {
+                    badgeDias = `<span class="bg-red-900 text-red-300 px-2 py-0.5 rounded text-xs font-bold">Vencido (${Math.abs(dias)}d)</span>`;
+                } else if (dias === 0) {
+                    badgeDias = `<span class="bg-amber-900 text-amber-300 px-2 py-0.5 rounded text-xs font-bold">Vence hoy</span>`;
+                } else {
+                    badgeDias = `<span class="bg-emerald-900 text-emerald-300 px-2 py-0.5 rounded text-xs font-bold">Quedan ${dias} días</span>`;
+                }
 
                 let tr = document.createElement("tr");
                 tr.innerHTML = `
                     <td class="p-3 font-semibold text-white">${item.cliente}</td>
                     <td class="p-3 text-slate-300">${item.servicio}</td>
-                    <td class="p-3 text-amber-400">${item.vencimiento}</td>
-                    <td class="p-3 text-slate-300">S/. ${item.costo.toFixed(2)} / <span class="text-emerald-400">S/. ${item.venta.toFixed(2)}</span></td>
+                    <td class="p-3">
+                        <div class="text-amber-400 text-xs mb-1">${item.vencimiento}</div>
+                        <div>${badgeDias}</div>
+                    </td>
+                    <td class="p-3 text-slate-300">S/. ${Number(item.costo).toFixed(2)} / <span class="text-emerald-400">S/. ${Number(item.venta).toFixed(2)}</span></td>
                     <td class="p-3">
                         <a href="https://wa.me/51${item.telefono}?text=Hola%20${item.cliente},%20tu%20cuenta%20de%20${item.servicio}%20está%20por%20vencer." target="_blank" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold inline-flex items-center">
                             <i class="fa-brands fa-whatsapp mr-1 text-sm"></i> Chat
@@ -99,10 +137,25 @@
             document.getElementById("total-clientes").innerText = datosClientes.length;
             document.getElementById("total-ventas").innerText = `S/. ${totalV.toFixed(2)}`;
             document.getElementById("total-ganancia").innerText = `S/. ${(totalV - totalC).toFixed(2)}`;
+            localStorage.setItem("panda_ventas", JSON.stringify(datosClientes));
         }
 
-        cargarApp();
+        document.getElementById("form-venta").addEventListener("submit", function(e) {
+            e.preventDefault();
+            const nuevoCliente = {
+                cliente: document.getElementById("input-cliente").value,
+                telefono: document.getElementById("input-telefono").value,
+                servicio: document.getElementById("input-servicio").value,
+                vencimiento: document.getElementById("input-vencimiento").value,
+                costo: parseFloat(document.getElementById("input-costo").value),
+                venta: parseFloat(document.getElementById("input-venta").value)
+            };
+            datosClientes.push(nuevoCliente);
+            actualizarApp();
+            this.reset();
+        });
+
+        actualizarApp();
     </script>
 </body>
-  </html>
-  
+</html>
