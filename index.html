@@ -26,11 +26,11 @@
                 <h2 id="total-clientes" class="text-2xl font-bold text-white">0</h2>
             </div>
             <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow">
-                <p class="text-xs text-slate-400">Ventas Totales</p>
+                <p class="text-xs text-slate-400">Ventas Totales Históricas</p>
                 <h2 id="total-ventas" class="text-2xl font-bold text-emerald-400">S/. 0.00</h2>
             </div>
             <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow">
-                <p class="text-xs text-slate-400">Ganancia Neta Estimada</p>
+                <p class="text-xs text-slate-400">Ganancia Neta Histórica</p>
                 <h2 id="total-ganancia" class="text-2xl font-bold text-cyan-400">S/. 0.00</h2>
             </div>
         </div>
@@ -77,6 +77,7 @@
     </div>
 
     <script>
+        // Carga tus clientes actuales desde la memoria de tu celular o usa los iniciales si estuviera vacío
         let datosClientes = JSON.parse(localStorage.getItem("panda_ventas")) || [
             { cliente: "Katy", telefono: "997243955", correo: "", servicio: "Disney", vencimiento: "2026-10-21", costo: 6.0, venta: 10.0 },
             { cliente: "Prime", telefono: "936426800", correo: "", servicio: "Prime Video", vencimiento: "2026-10-31", costo: 2.5, venta: 7.0 },
@@ -87,6 +88,12 @@
             { cliente: "Disney", telefono: "924204068", correo: "", servicio: "Disney", vencimiento: "2026-11-11", costo: 3.9, venta: 10.0 },
             { cliente: "Jenifer", telefono: "944461030", correo: "", servicio: "HBO Max", vencimiento: "2026-11-13", costo: 3.9, venta: 8.0 }
         ];
+
+        // Historial independiente para que las ventas totales no bajen al eliminar perfiles vencidos
+        let historialAcumulado = JSON.parse(localStorage.getItem("panda_historial")) || {
+            ventasTotales: datosClientes.reduce((acc, item) => acc + Number(item.venta), 0),
+            costosTotales: datosClientes.reduce((acc, item) => acc + Number(item.costo), 0)
+        };
 
         function calcularDiasRestantes(fechaVencimiento) {
             const hoy = new Date();
@@ -99,13 +106,8 @@
         function actualizarApp() {
             const tbody = document.getElementById("tabla-cuerpo");
             tbody.innerHTML = "";
-            let totalV = 0;
-            let totalC = 0;
 
             datosClientes.forEach((item, index) => {
-                totalV += Number(item.venta);
-                totalC += Number(item.costo);
-
                 const dias = calcularDiasRestantes(item.vencimiento);
                 let badgeDias = "";
                 if (dias < 0) {
@@ -146,23 +148,34 @@
             });
 
             document.getElementById("total-clientes").innerText = datosClientes.length;
-            document.getElementById("total-ventas").innerText = `S/. ${totalV.toFixed(2)}`;
-            document.getElementById("total-ganancia").innerText = `S/. ${(totalV - totalC).toFixed(2)}`;
+            document.getElementById("total-ventas").innerText = `S/. ${historialAcumulado.ventasTotales.toFixed(2)}`;
+            document.getElementById("total-ganancia").innerText = `S/. ${(historialAcumulado.ventasTotales - historialAcumulado.costosTotales).toFixed(2)}`;
+            
             localStorage.setItem("panda_ventas", JSON.stringify(datosClientes));
+            localStorage.setItem("panda_historial", JSON.stringify(historialAcumulado));
         }
 
         document.getElementById("form-venta").addEventListener("submit", function(e) {
             e.preventDefault();
+            const costoVal = parseFloat(document.getElementById("input-costo").value);
+            const ventaVal = parseFloat(document.getElementById("input-venta").value);
+
             const nuevoCliente = {
                 cliente: document.getElementById("input-cliente").value,
                 telefono: document.getElementById("input-telefono").value,
                 correo: document.getElementById("input-correo").value,
                 servicio: document.getElementById("input-servicio").value,
                 vencimiento: document.getElementById("input-vencimiento").value,
-                costo: parseFloat(document.getElementById("input-costo").value),
-                venta: parseFloat(document.getElementById("input-venta").value)
+                costo: costoVal,
+                venta: ventaVal
             };
+
             datosClientes.push(nuevoCliente);
+            
+            // Sumar al acumulador histórico de ingresos
+            historialAcumulado.ventasTotales += ventaVal;
+            historialAcumulado.costosTotales += costoVal;
+
             actualizarApp();
             this.reset();
         });
@@ -172,7 +185,6 @@
             if (isNaN(fechaActual.getTime())) {
                 fechaActual = new Date();
             }
-            // Sumar 1 mes exacto
             fechaActual.setMonth(fechaActual.getMonth() + 1);
             
             let anio = fechaActual.getFullYear();
@@ -184,7 +196,7 @@
         }
 
         function eliminarCliente(index) {
-            if (confirm("¿Estás seguro de eliminar este cliente?")) {
+            if (confirm("¿Estás seguro de eliminar este cliente de la lista?")) {
                 datosClientes.splice(index, 1);
                 actualizarApp();
             }
@@ -194,3 +206,4 @@
     </script>
 </body>
 </html>
+
