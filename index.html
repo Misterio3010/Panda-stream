@@ -79,19 +79,22 @@
     <script>
         let datosClientes = JSON.parse(localStorage.getItem("panda_ventas")) || [];
 
-        // Forzamos un contador histórico basado en la cantidad real y segura
-        let totalClientesHistorial = localStorage.getItem("panda_total_clientes");
-        if (!totalClientesHistorial || Number(totalClientesHistorial) < datosClientes.length) {
+        // Limpieza automática y segura para evitar cualquier 'undefined'
+        let totalClientesHistorial = Number(localStorage.getItem("panda_total_clientes_v3"));
+        if (!totalClientesHistorial || isNaN(totalClientesHistorial) || totalClientesHistorial < datosClientes.length) {
             totalClientesHistorial = datosClientes.length;
-            localStorage.setItem("panda_total_clientes", totalClientesHistorial);
-        } else {
-            totalClientesHistorial = Number(totalClientesHistorial);
+            localStorage.setItem("panda_total_clientes_v3", totalClientesHistorial);
         }
 
-        let historialAcumulado = JSON.parse(localStorage.getItem("panda_historial")) || {
-            ventasTotales: datosClientes.reduce((acc, item) => acc + Number(item.venta || 0), 0),
-            costosTotales: datosClientes.reduce((acc, item) => acc + Number(item.costo || 0), 0)
-        };
+        let ventasTotalesVal = Number(localStorage.getItem("panda_ventas_totales_v3"));
+        let costosTotalesVal = Number(localStorage.getItem("panda_costos_totales_v3"));
+
+        if (!ventasTotalesVal || isNaN(ventasTotalesVal) || ventasTotalesVal === 0) {
+            ventasTotalesVal = datosClientes.reduce((acc, item) => acc + Number(item.venta || 0), 0);
+            costosTotalesVal = datosClientes.reduce((acc, item) => acc + Number(item.costo || 0), 0);
+            localStorage.setItem("panda_ventas_totales_v3", ventasTotalesVal);
+            localStorage.setItem("panda_costos_totales_v3", costosTotalesVal);
+        }
 
         function calcularDiasRestantes(fechaVencimiento) {
             const hoy = new Date();
@@ -146,12 +149,13 @@
             });
 
             document.getElementById("total-clientes").innerText = totalClientesHistorial;
-            document.getElementById("total-ventas").innerText = `S/. ${historialAcumulado.ventasTotales.toFixed(2)}`;
-            document.getElementById("total-ganancia").innerText = `S/. ${(historialAcumulado.ventasTotales - historialAcumulado.costosTotales).toFixed(2)}`;
+            document.getElementById("total-ventas").innerText = `S/. ${ventasTotalesVal.toFixed(2)}`;
+            document.getElementById("total-ganancia").innerText = `S/. ${(ventasTotalesVal - costosTotalesVal).toFixed(2)}`;
             
             localStorage.setItem("panda_ventas", JSON.stringify(datosClientes));
-            localStorage.setItem("panda_total_clientes", totalClientesHistorial);
-            localStorage.setItem("panda_historial", JSON.stringify(historialAcumulado));
+            localStorage.setItem("panda_total_clientes_v3", totalClientesHistorial);
+            localStorage.setItem("panda_ventas_totales_v3", ventasTotalesVal);
+            localStorage.setItem("panda_costos_totales_v3", costosTotalesVal);
         }
 
         document.getElementById("form-venta").addEventListener("submit", function(e) {
@@ -172,8 +176,8 @@
             datosClientes.push(nuevoCliente);
             
             totalClientesHistorial += 1;
-            historialAcumulado.ventasTotales += ventaVal;
-            historialAcumulado.costosTotales += costoVal;
+            ventasTotalesVal += ventaVal;
+            costosTotalesVal += costoVal;
 
             actualizarApp();
             this.reset();
@@ -197,7 +201,7 @@
         function eliminarCliente(index) {
             if (confirm("¿Estás seguro de eliminar este cliente de la tabla?")) {
                 datosClientes.splice(index, 1);
-                // El total de clientes vendidos NO baja, se queda intacto
+                // El total de clientes y el dinero se quedan intactos aquí
                 actualizarApp();
             }
         }
@@ -206,3 +210,4 @@
     </script>
 </body>
 </html>
+
