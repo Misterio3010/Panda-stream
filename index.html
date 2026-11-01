@@ -79,12 +79,14 @@
     <script>
         let datosClientes = JSON.parse(localStorage.getItem("panda_ventas")) || [];
 
+        // Recuperar o inicializar historial de manera ultra segura para evitar 'undefined'
         let historialAcumulado = JSON.parse(localStorage.getItem("panda_historial"));
-        if (!historialAcumulado) {
+        
+        if (!historialAcumulado || typeof historialAcumulado.totalClientesVendidos !== 'number') {
             historialAcumulado = {
                 totalClientesVendidos: datosClientes.length,
-                ventasTotales: datosClientes.reduce((acc, item) => acc + Number(item.venta), 0),
-                costosTotales: datosClientes.reduce((acc, item) => acc + Number(item.costo), 0)
+                ventasTotales: datosClientes.reduce((acc, item) => acc + Number(item.venta || 0), 0),
+                costosTotales: datosClientes.reduce((acc, item) => acc + Number(item.costo || 0), 0)
             };
         } else {
             if (historialAcumulado.totalClientesVendidos < datosClientes.length) {
@@ -126,7 +128,7 @@
                         <div class="text-amber-400 text-xs mb-1">${item.vencimiento}</div>
                         <div>${badgeDias}</div>
                     </td>
-                    <td class="p-3 text-slate-300">S/. ${Number(item.costo).toFixed(2)} / <span class="text-emerald-400">S/. ${Number(item.venta).toFixed(2)}</span></td>
+                    <td class="p-3 text-slate-300">S/. ${Number(item.costo || 0).toFixed(2)} / <span class="text-emerald-400">S/. ${Number(item.venta || 0).toFixed(2)}</span></td>
                     <td class="p-3 text-center space-y-1">
                         <div class="flex justify-center gap-1">
                             <a href="https://wa.me/51${item.telefono}?text=Hola%20${item.cliente},%20tu%20cuenta%20de%20${item.servicio}%20está%20por%20vencer." target="_blank" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded text-xs font-bold inline-flex items-center" title="Enviar WhatsApp">
@@ -154,8 +156,8 @@
 
         document.getElementById("form-venta").addEventListener("submit", function(e) {
             e.preventDefault();
-            const costoVal = parseFloat(document.getElementById("input-costo").value);
-            const ventaVal = parseFloat(document.getElementById("input-venta").value);
+            const costoVal = parseFloat(document.getElementById("input-costo").value) || 0;
+            const ventaVal = parseFloat(document.getElementById("input-venta").value) || 0;
 
             const nuevoCliente = {
                 cliente: document.getElementById("input-cliente").value,
