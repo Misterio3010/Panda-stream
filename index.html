@@ -19,10 +19,10 @@
             </div>
         </header>
 
-        <!-- Resumen de Métricas -->
+        <!-- Resumen de Métricas (Totales Históricos Indestructibles) -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow">
-                <p class="text-xs text-slate-400">Total Clientes Activos</p>
+                <p class="text-xs text-slate-400">Total Clientes Vendidos</p>
                 <h2 id="total-clientes" class="text-2xl font-bold text-white">0</h2>
             </div>
             <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow">
@@ -77,23 +77,24 @@
     </div>
 
     <script>
-        // Carga tus clientes actuales desde la memoria de tu celular o usa los iniciales si estuviera vacío
-        let datosClientes = JSON.parse(localStorage.getItem("panda_ventas")) || [
-            { cliente: "Katy", telefono: "997243955", correo: "", servicio: "Disney", vencimiento: "2026-10-21", costo: 6.0, venta: 10.0 },
-            { cliente: "Prime", telefono: "936426800", correo: "", servicio: "Prime Video", vencimiento: "2026-10-31", costo: 2.5, venta: 7.0 },
-            { cliente: "Gianpierre", telefono: "902106379", correo: "", servicio: "Paramount", vencimiento: "2026-11-02", costo: 3.9, venta: 7.0 },
-            { cliente: "Aracely", telefono: "932507744", correo: "", servicio: "Vix Premium", vencimiento: "2026-11-03", costo: 1.9, venta: 15.0 },
-            { cliente: "Pedro", telefono: "959361261", correo: "", servicio: "Netflix", vencimiento: "2026-11-05", costo: 9.0, venta: 12.0 },
-            { cliente: "Cristian", telefono: "960441897", correo: "", servicio: "Disney", vencimiento: "2026-11-04", costo: 3.9, venta: 10.0 },
-            { cliente: "Disney", telefono: "924204068", correo: "", servicio: "Disney", vencimiento: "2026-11-11", costo: 3.9, venta: 10.0 },
-            { cliente: "Jenifer", telefono: "944461030", correo: "", servicio: "HBO Max", vencimiento: "2026-11-13", costo: 3.9, venta: 8.0 }
-        ];
+        // Cargamos tus clientes activos de la pantalla
+        let datosClientes = JSON.parse(localStorage.getItem("panda_ventas")) || [];
 
-        // Historial independiente para que las ventas totales no bajen al eliminar perfiles vencidos
-        let historialAcumulado = JSON.parse(localStorage.getItem("panda_historial")) || {
-            ventasTotales: datosClientes.reduce((acc, item) => acc + Number(item.venta), 0),
-            costosTotales: datosClientes.reduce((acc, item) => acc + Number(item.costo), 0)
-        };
+        // Creamos un registro histórico separado y blindado para que las ventas TOTALES no bajen nunca
+        let historialAcumulado = JSON.parse(localStorage.getItem("panda_historial"));
+        if (!historialAcumulado) {
+            // Si es la primera vez que se activa, toma exactamente los 78 clientes y dinero que ya tienes guardados
+            historialAcumulado = {
+                totalClientesVendidos: datosClientes.length,
+                ventasTotales: datosClientes.reduce((acc, item) => acc + Number(item.venta), 0),
+                costosTotales: datosClientes.reduce((acc, item) => acc + Number(item.costo), 0)
+            };
+        } else {
+            // Asegurarnos de que el histórico nunca sea menor a lo que ya tienes visible (por seguridad)
+            if (historialAcumulado.totalClientesVendidos < datosClientes.length) {
+                historialAcumulado.totalClientesVendidos = datosClientes.length;
+            }
+        }
 
         function calcularDiasRestantes(fechaVencimiento) {
             const hoy = new Date();
@@ -147,10 +148,12 @@
                 tbody.appendChild(tr);
             });
 
-            document.getElementById("total-clientes").innerText = datosClientes.length;
+            // AQUÍ ESTÁ EL TRUCO: Mostramos los números fijos del historial que NUNCA bajan
+            document.getElementById("total-clientes").innerText = historialAcumulado.totalClientesVendidos;
             document.getElementById("total-ventas").innerText = `S/. ${historialAcumulado.ventasTotales.toFixed(2)}`;
             document.getElementById("total-ganancia").innerText = `S/. ${(historialAcumulado.ventasTotales - historialAcumulado.costosTotales).toFixed(2)}`;
             
+            // Guardamos todo en la memoria
             localStorage.setItem("panda_ventas", JSON.stringify(datosClientes));
             localStorage.setItem("panda_historial", JSON.stringify(historialAcumulado));
         }
@@ -170,9 +173,10 @@
                 venta: ventaVal
             };
 
-            datosClientes.push(nuevoCliente);
+            datosClientes.push(nuevoJSON = nuevoCliente); // Agrega a la tabla
             
-            // Sumar al acumulador histórico de ingresos
+            // Suma permanente al historial totalizador
+            historialAcumulado.totalClientesVendidos += 1;
             historialAcumulado.ventasTotales += ventaVal;
             historialAcumulado.costosTotales += costoVal;
 
@@ -196,7 +200,9 @@
         }
 
         function eliminarCliente(index) {
-            if (confirm("¿Estás seguro de eliminar este cliente de la lista?")) {
+            if (confirm("¿Estás seguro de eliminar este cliente de la tabla?")) {
+                // Al eliminar de la tabla, el cliente sale de la lista visual,
+                // PERO el contador de total de ventas y el dinero se quedan intactos en el historial.
                 datosClientes.splice(index, 1);
                 actualizarApp();
             }
@@ -206,4 +212,3 @@
     </script>
 </body>
 </html>
-
