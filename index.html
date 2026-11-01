@@ -19,7 +19,7 @@
             </div>
         </header>
 
-        <!-- Resumen de Métricas (Totales Históricos Indestructibles) -->
+        <!-- Resumen de Métricas -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow">
                 <p class="text-xs text-slate-400">Total Clientes Vendidos</p>
@@ -77,20 +77,16 @@
     </div>
 
     <script>
-        // Cargamos tus clientes activos de la pantalla
         let datosClientes = JSON.parse(localStorage.getItem("panda_ventas")) || [];
 
-        // Creamos un registro histórico separado y blindado para que las ventas TOTALES no bajen nunca
         let historialAcumulado = JSON.parse(localStorage.getItem("panda_historial"));
         if (!historialAcumulado) {
-            // Si es la primera vez que se activa, toma exactamente los 78 clientes y dinero que ya tienes guardados
             historialAcumulado = {
                 totalClientesVendidos: datosClientes.length,
                 ventasTotales: datosClientes.reduce((acc, item) => acc + Number(item.venta), 0),
                 costosTotales: datosClientes.reduce((acc, item) => acc + Number(item.costo), 0)
             };
         } else {
-            // Asegurarnos de que el histórico nunca sea menor a lo que ya tienes visible (por seguridad)
             if (historialAcumulado.totalClientesVendidos < datosClientes.length) {
                 historialAcumulado.totalClientesVendidos = datosClientes.length;
             }
@@ -148,12 +144,10 @@
                 tbody.appendChild(tr);
             });
 
-            // AQUÍ ESTÁ EL TRUCO: Mostramos los números fijos del historial que NUNCA bajan
             document.getElementById("total-clientes").innerText = historialAcumulado.totalClientesVendidos;
             document.getElementById("total-ventas").innerText = `S/. ${historialAcumulado.ventasTotales.toFixed(2)}`;
             document.getElementById("total-ganancia").innerText = `S/. ${(historialAcumulado.ventasTotales - historialAcumulado.costosTotales).toFixed(2)}`;
             
-            // Guardamos todo en la memoria
             localStorage.setItem("panda_ventas", JSON.stringify(datosClientes));
             localStorage.setItem("panda_historial", JSON.stringify(historialAcumulado));
         }
@@ -173,9 +167,8 @@
                 venta: ventaVal
             };
 
-            datosClientes.push(nuevoJSON = nuevoCliente); // Agrega a la tabla
+            datosClientes.push(nuevoCliente);
             
-            // Suma permanente al historial totalizador
             historialAcumulado.totalClientesVendidos += 1;
             historialAcumulado.ventasTotales += ventaVal;
             historialAcumulado.costosTotales += costoVal;
@@ -201,8 +194,6 @@
 
         function eliminarCliente(index) {
             if (confirm("¿Estás seguro de eliminar este cliente de la tabla?")) {
-                // Al eliminar de la tabla, el cliente sale de la lista visual,
-                // PERO el contador de total de ventas y el dinero se quedan intactos en el historial.
                 datosClientes.splice(index, 1);
                 actualizarApp();
             }
