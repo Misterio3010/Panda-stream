@@ -79,20 +79,19 @@
     <script>
         let datosClientes = JSON.parse(localStorage.getItem("panda_ventas")) || [];
 
-        // Recuperar o inicializar historial de manera ultra segura para evitar 'undefined'
-        let historialAcumulado = JSON.parse(localStorage.getItem("panda_historial"));
-        
-        if (!historialAcumulado || typeof historialAcumulado.totalClientesVendidos !== 'number') {
-            historialAcumulado = {
-                totalClientesVendidos: datosClientes.length,
-                ventasTotales: datosClientes.reduce((acc, item) => acc + Number(item.venta || 0), 0),
-                costosTotales: datosClientes.reduce((acc, item) => acc + Number(item.costo || 0), 0)
-            };
+        // Forzamos un contador histórico basado en la cantidad real y segura
+        let totalClientesHistorial = localStorage.getItem("panda_total_clientes");
+        if (!totalClientesHistorial || Number(totalClientesHistorial) < datosClientes.length) {
+            totalClientesHistorial = datosClientes.length;
+            localStorage.setItem("panda_total_clientes", totalClientesHistorial);
         } else {
-            if (historialAcumulado.totalClientesVendidos < datosClientes.length) {
-                historialAcumulado.totalClientesVendidos = datosClientes.length;
-            }
+            totalClientesHistorial = Number(totalClientesHistorial);
         }
+
+        let historialAcumulado = JSON.parse(localStorage.getItem("panda_historial")) || {
+            ventasTotales: datosClientes.reduce((acc, item) => acc + Number(item.venta || 0), 0),
+            costosTotales: datosClientes.reduce((acc, item) => acc + Number(item.costo || 0), 0)
+        };
 
         function calcularDiasRestantes(fechaVencimiento) {
             const hoy = new Date();
@@ -146,11 +145,12 @@
                 tbody.appendChild(tr);
             });
 
-            document.getElementById("total-clientes").innerText = historialAcumulado.totalClientesVendidos;
+            document.getElementById("total-clientes").innerText = totalClientesHistorial;
             document.getElementById("total-ventas").innerText = `S/. ${historialAcumulado.ventasTotales.toFixed(2)}`;
             document.getElementById("total-ganancia").innerText = `S/. ${(historialAcumulado.ventasTotales - historialAcumulado.costosTotales).toFixed(2)}`;
             
             localStorage.setItem("panda_ventas", JSON.stringify(datosClientes));
+            localStorage.setItem("panda_total_clientes", totalClientesHistorial);
             localStorage.setItem("panda_historial", JSON.stringify(historialAcumulado));
         }
 
@@ -171,7 +171,7 @@
 
             datosClientes.push(nuevoCliente);
             
-            historialAcumulado.totalClientesVendidos += 1;
+            totalClientesHistorial += 1;
             historialAcumulado.ventasTotales += ventaVal;
             historialAcumulado.costosTotales += costoVal;
 
@@ -197,6 +197,7 @@
         function eliminarCliente(index) {
             if (confirm("¿Estás seguro de eliminar este cliente de la tabla?")) {
                 datosClientes.splice(index, 1);
+                // El total de clientes vendidos NO baja, se queda intacto
                 actualizarApp();
             }
         }
