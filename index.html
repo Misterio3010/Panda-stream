@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panda Stream - Control de Ventas</title>
+    <title>Panda Stream - Control de Suscripciones</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -26,12 +26,12 @@
                 <h2 id="total-clientes" class="text-2xl font-bold text-white">0</h2>
             </div>
             <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow">
-                <p class="text-xs text-slate-400">Ventas Totales Históricas</p>
-                <h2 id="total-ventas" class="text-2xl font-bold text-emerald-400">S/. 0.00</h2>
+                <p class="text-xs text-slate-400">Inversión Proveedores (Costo)</p>
+                <h2 id="total-costos" class="text-2xl font-bold text-amber-400">S/. 0.00</h2>
             </div>
             <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow">
-                <p class="text-xs text-slate-400">Ganancia Neta Histórica</p>
-                <h2 id="total-ganancia" class="text-2xl font-bold text-cyan-400">S/. 0.00</h2>
+                <p class="text-xs text-slate-400">Ganancia Neta Limpia</p>
+                <h2 id="total-ganancia" class="text-2xl font-bold text-emerald-400">S/. 0.00</h2>
             </div>
         </div>
 
@@ -44,7 +44,7 @@
                 <input type="email" id="input-correo" placeholder="Correo electrónico (opcional)" class="bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500">
                 <input type="text" id="input-servicio" placeholder="Servicio (ej. Disney, Netflix)" required class="bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500">
                 <input type="date" id="input-vencimiento" required class="bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500">
-                <input type="number" step="0.1" id="input-costo" placeholder="Costo proveedor (S/.)" required class="bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500">
+                <input type="number" step="0.1" id="input-costo" placeholder="Costo proveedor (ej. 0 o 10)" required class="bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500">
                 <input type="number" step="0.1" id="input-venta" placeholder="Precio venta (S/.)" required class="bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500 sm:col-span-2 lg:col-span-2">
                 <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold p-2.5 rounded-lg transition text-sm flex items-center justify-center">
                     <i class="fa-solid fa-plus mr-1"></i> Guardar Venta
@@ -79,22 +79,14 @@
     <script>
         let datosClientes = JSON.parse(localStorage.getItem("panda_ventas")) || [];
 
-        // Limpieza automática y segura para evitar cualquier 'undefined'
-        let totalClientesHistorial = Number(localStorage.getItem("panda_total_clientes_v3"));
-        if (!totalClientesHistorial || isNaN(totalClientesHistorial) || totalClientesHistorial < datosClientes.length) {
-            totalClientesHistorial = datosClientes.length;
-            localStorage.setItem("panda_total_clientes_v3", totalClientesHistorial);
-        }
-
-        let ventasTotalesVal = Number(localStorage.getItem("panda_ventas_totales_v3"));
-        let costosTotalesVal = Number(localStorage.getItem("panda_costos_totales_v3"));
-
-        if (!ventasTotalesVal || isNaN(ventasTotalesVal) || ventasTotalesVal === 0) {
-            ventasTotalesVal = datosClientes.reduce((acc, item) => acc + Number(item.venta || 0), 0);
-            costosTotalesVal = datosClientes.reduce((acc, item) => acc + Number(item.costo || 0), 0);
-            localStorage.setItem("panda_ventas_totales_v3", ventasTotalesVal);
-            localStorage.setItem("panda_costos_totales_v3", costosTotalesVal);
-        }
+        // Recalculamos los totales desde cero de forma limpia respetando tus clientes reales
+        let totalClientesHistorial = datosClientes.length;
+        let costosTotalesVal = datosClientes.reduce((acc, item) => acc + (item.costo !== undefined ? Number(item.costo) : 0), 0);
+        let gananciasTotalesVal = datosClientes.reduce((acc, item) => {
+            const costo = item.costo !== undefined ? Number(item.costo) : 0;
+            const venta = item.venta !== undefined ? Number(item.venta) : 0;
+            return acc + (venta - costo);
+        }, 0);
 
         function calcularDiasRestantes(fechaVencimiento) {
             const hoy = new Date();
@@ -149,19 +141,17 @@
             });
 
             document.getElementById("total-clientes").innerText = totalClientesHistorial;
-            document.getElementById("total-ventas").innerText = `S/. ${ventasTotalesVal.toFixed(2)}`;
-            document.getElementById("total-ganancia").innerText = `S/. ${(ventasTotalesVal - costosTotalesVal).toFixed(2)}`;
+            document.getElementById("total-costos").innerText = `S/. ${costosTotalesVal.toFixed(2)}`;
+            document.getElementById("total-ganancia").innerText = `S/. ${gananciasTotalesVal.toFixed(2)}`;
             
             localStorage.setItem("panda_ventas", JSON.stringify(datosClientes));
-            localStorage.setItem("panda_total_clientes_v3", totalClientesHistorial);
-            localStorage.setItem("panda_ventas_totales_v3", ventasTotalesVal);
-            localStorage.setItem("panda_costos_totales_v3", costosTotalesVal);
         }
 
         document.getElementById("form-venta").addEventListener("submit", function(e) {
             e.preventDefault();
             const costoVal = parseFloat(document.getElementById("input-costo").value) || 0;
             const ventaVal = parseFloat(document.getElementById("input-venta").value) || 0;
+            const gananciaLimpia = ventaVal - costoVal;
 
             const nuevoCliente = {
                 cliente: document.getElementById("input-cliente").value,
@@ -176,8 +166,8 @@
             datosClientes.push(nuevoCliente);
             
             totalClientesHistorial += 1;
-            ventasTotalesVal += ventaVal;
             costosTotalesVal += costoVal;
+            gananciasTotalesVal += gananciaLimpia;
 
             actualizarApp();
             this.reset();
@@ -201,7 +191,14 @@
         function eliminarCliente(index) {
             if (confirm("¿Estás seguro de eliminar este cliente de la tabla?")) {
                 datosClientes.splice(index, 1);
-                // El total de clientes y el dinero se quedan intactos aquí
+                // Al eliminar, recalculamos para que los costos y ganancias se queden firmes arriba
+                costosTotalesVal = datosClientes.reduce((acc, item) => acc + (item.costo !== undefined ? Number(item.costo) : 0), 0);
+                gananciasTotalesVal = datosClientes.reduce((acc, item) => {
+                    const costo = item.costo !== undefined ? Number(item.costo) : 0;
+                    const venta = item.venta !== undefined ? Number(item.venta) : 0;
+                    return acc + (venta - costo);
+                }, 0);
+                totalClientesHistorial = datosClientes.length;
                 actualizarApp();
             }
         }
@@ -210,4 +207,3 @@
     </script>
 </body>
 </html>
-
